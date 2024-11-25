@@ -2,6 +2,7 @@ package common
 
 import (
 	"log"
+	"os"
 
 	"github.com/streadway/amqp"
 )
@@ -20,7 +21,8 @@ func FailOnError(err error, msg string) {
 
 func RetrieveRabbitMQQueue() (*amqp.Connection, *amqp.Channel, amqp.Queue) {
 
-	connection, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	rabbitMQURL := os.Getenv("RABBITMQ_URL")
+	connection, err := amqp.Dial(rabbitMQURL)
 	FailOnError(err, "Failed to connect to RabbitMQ")
 
 	channel, err := connection.Channel()
