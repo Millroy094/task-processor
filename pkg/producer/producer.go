@@ -29,6 +29,7 @@ func sendTask(channel *amqp.Channel, queue string, task common.Task) {
 }
 
 func main() {
+	
 	connection, channel, queue := common.RetrieveRabbitMQQueue()
 
 	defer connection.Close()
@@ -51,6 +52,10 @@ func main() {
 		fmt.Fprintf(w, "Task ID %d queued successfully", task.ID)
 	})
 
-	log.Println("API server running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	port := os.Getenv("API_PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Printf("API server running on http://localhost:%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
