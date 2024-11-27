@@ -9,11 +9,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	"github.com/gin-gonic/gin"
-	"github.com/swaggo/gin-swagger"
-	"github.com/swaggo/files"
 	"github.com/millroy094/task-processor/pkg/common"
 	"github.com/millroy094/task-processor/pkg/task"
-	_ "github.com/millroy094/task-processor/cmd/producer/docs"
+	"github.com/swaggest/swgui/v3"
 )
 
 // @title Task Processor API
@@ -81,9 +79,14 @@ func main() {
 
 	r := gin.Default()
 
-
 	r.POST("/tasks", createTaskHandler(channel, queue.Name))
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	swaggerHandler := v3.NewHandler("Task Processor API", "/swagger.json", "/swagger/")
+	r.GET("/swagger/*any", func(c *gin.Context) {
+		swaggerHandler.ServeHTTP(c.Writer, c.Request)
+	})
 
+	r.GET("/swagger.json", func(c *gin.Context) {
+		c.File("./docs/swagger.json") 
+	})
 	r.Run(":" + apiPort)
 }
