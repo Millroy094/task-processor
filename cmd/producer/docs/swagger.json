@@ -1,0 +1,72 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API for creating tasks and sending them to RabbitMQ.",
+        "title": "Task Processor API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/tasks": {
+            "post": {
+                "description": "Create a new task and send it to the RabbitMQ queue.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Create a new task",
+                "parameters": [
+                    {
+                        "description": "Task",
+                        "name": "task",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/task.Task"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Task created successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "task.Task": {
+            "description": "Represents a task with ID, type, and payload information.",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "@ID Task ID\n@example 1",
+                    "type": "integer"
+                },
+                "payload": {
+                    "description": "@Payload The actual task payload\n@example \"Send welcome email\"",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "@Type Type of the task\n@example \"email\"",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
