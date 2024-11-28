@@ -1,21 +1,39 @@
 package main
 
 import (
-	"os"
+	"encoding/json"
+	"fmt"
 	"log"
-	"github.com/joho/godotenv"
+	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
 
 	"github.com/millroy094/task-processor/pkg/common"
 	"github.com/millroy094/task-processor/pkg/task"
+	"github.com/streadway/amqp"
 )
 
-func processor(id int,messages <-chan amp.Delivery) {
+func performTask(task task.Task) error {
+	// Simulate task handling logic
+	// Return nil on success or an error on failure
+	return nil
+}
+
+func processor(id int, messages <-chan amqp.Delivery) {
 	for message := range messages {
 		var task task.Task
-		err:= json.Unmarshal(message.Body, &task)
+		err := json.Unmarshal(message.Body, &task)
 
 		if err != nil {
 			log.Printf("Worker %d: Failed to deserialize task: %v\n", id, err)
+			message.Nack(false, false)
+			continue
+		}
+
+		if err := performTask(task); err != nil {
+			log.Printf("Worker %d: Task failed: %v\n", id, err)
+			message.Nack(false, true)
 			continue
 		}
 
@@ -27,15 +45,10 @@ func processor(id int,messages <-chan amp.Delivery) {
 
 func main() {
 
-	err := godotenv.Load()
+	_, err := common.PrepareEnvironment([]string{"RABBITMQ_URL"})
+
 	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
-
-	rabbitMQURL := os.Getenv("RABBITMQ_URL")
-
-	if rabbitMQURL == "" {
-		log.Fatal("Missing required environment variables")
+		log.Fatalf("Environment preparation failed: %v", err)
 	}
 
 	connection, channel, queue := common.RetrieveRabbitMQQueue()
@@ -43,11 +56,20 @@ func main() {
 	defer connection.Close()
 	defer channel.Close()
 
-	messages, err: channel.Consume(queue.Name, "", false, false, false, false, nil)
+	if err := channel.Qos(10, 0, false); err != nil {
+		log.Fatalf("Failed to set QoS: %v", err)
+	}
+
+	messages, err := channel.Consume(queue.Name, "", false, false, false, false, nil)
 
 	common.FailOnError(err, "Failed to register a consumer")
 
-	for i := 1; i <= 3; i++ {
-		go worker(i, messages)
+	numWorkers := runtime.NumCPU()
+	for i := 1; i <= numWorkers; i++ {
+		go processor(i, messages)
 	}
+
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
+	<-stopChan
 }

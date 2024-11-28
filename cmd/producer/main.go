@@ -1,17 +1,16 @@
 package main
 
 import (
-	"os"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"github.com/joho/godotenv"
-	"github.com/streadway/amqp"
+
 	"github.com/gin-gonic/gin"
 	"github.com/millroy094/task-processor/pkg/common"
 	"github.com/millroy094/task-processor/pkg/task"
-	"github.com/swaggest/swgui/v3"
+	"github.com/streadway/amqp"
+	v3 "github.com/swaggest/swgui/v3"
 )
 
 // @title Task Processor API
@@ -46,7 +45,7 @@ func sendTask(channel *amqp.Channel, queue string, task task.Task) {
 // @Failure 400 {object} map[string]interface{} "Invalid request"
 // @Router /tasks [post]
 func createTaskHandler(channel *amqp.Channel, queue string) func(*gin.Context) {
-	return func(c *gin.Context) { 
+	return func(c *gin.Context) {
 		var task task.Task
 		if err := c.ShouldBindJSON(&task); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
@@ -60,18 +59,14 @@ func createTaskHandler(channel *amqp.Channel, queue string) func(*gin.Context) {
 
 func main() {
 
-	err := godotenv.Load()
+	envVariables, err := common.PrepareEnvironment([]string{"RABBITMQ_URL", "API_PORT"})
+
 	if err != nil {
-		log.Fatalf("Error loading .env file")
+		log.Fatalf("Environment preparation failed: %v", err)
 	}
 
-	rabbitMQURL := os.Getenv("RABBITMQ_URL")
-	apiPort := os.Getenv("API_PORT")
+	apiPort := envVariables["API_PORT"]
 
-	if rabbitMQURL == "" || apiPort == "" {
-		log.Fatal("Missing required environment variables")
-	}
-	
 	connection, channel, queue := common.RetrieveRabbitMQQueue()
 
 	defer connection.Close()
@@ -86,7 +81,7 @@ func main() {
 	})
 
 	r.GET("/swagger.json", func(c *gin.Context) {
-		c.File("./docs/swagger.json") 
+		c.File("./docs/swagger.json")
 	})
 	r.Run(":" + apiPort)
 }
