@@ -87,6 +87,7 @@ func main() {
 
 	numWorkers := runtime.NumCPU()
 	for i := 1; i <= numWorkers; i++ {
+		wg.Add(1)
 		go processor(i, messages, shutdownChan, &wg)
 	}
 
@@ -95,4 +96,6 @@ func main() {
 
 	close(shutdownChan)
 
+	wg.Wait()
+	log.Println("All workers stopped. Exiting...")
 }
