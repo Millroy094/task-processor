@@ -16,9 +16,14 @@ import (
 )
 
 func performTask(task task.Task) error {
-	// Simulate task handling logic
-	// Return nil on success or an error on failure
-	return nil
+	switch task.Type {
+	case "email":
+		return sendEmail(task)
+	case "health_check":
+		return performHealthCheck(task)
+	default:
+		return nil
+	}
 }
 
 func processor(id int, messages <-chan amqp.Delivery, shutdownChan <-chan struct{}, wg *sync.WaitGroup) {
