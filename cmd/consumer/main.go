@@ -106,7 +106,7 @@ func processor(id int, messages <-chan amqp.Delivery, shutdownChan <-chan struct
 }
 
 func main() {
-	_, err := common.PrepareEnvironment([]string{"RABBITMQ_URL", "MONGODB_URL", "MAX_RETRIES"})
+	_, err := common.PrepareEnvironment([]string{"RABBITMQ_URL", "MONGODB_URL", "MAILHOG_HOST", "MAILHOG_PORT", "MAIL_FROM"})
 
 	if err != nil {
 		log.Fatalf("Environment preparation failed: %v", err)

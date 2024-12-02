@@ -21,6 +21,14 @@ services:
       - ~/.docker-conf/mongodb/data/:/data/mongodb
     networks:
       - task-manager-network
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - task-manager-network
   producer:
     build:
       context: .
@@ -45,9 +53,13 @@ services:
     depends_on:
       - rabbitmq
       - mongodb
+      - mailhog
     environment:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       MONGODB_URL: mongodb://mongodb:27017
+      MAILHOG_HOST: mailhog
+      MAILHOG_PORT: 1025
+      MAIL_FROM: "admin@informic.co.uk"
     networks:
       - task-manager-network
 networks:

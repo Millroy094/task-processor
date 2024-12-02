@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/smtp"
+	"os"
 
 	"github.com/millroy094/task-processor/pkg/task"
 )
@@ -24,11 +25,10 @@ func sendEmail(task task.Task) error {
 		return err
 	}
 
-	smtpHost := "smtp.gmail.com"
-	smtpPort := "587"
-
-	from := "your-email@gmail.com"
-	password := "your-app-password"
+	smtpHost := os.Getenv("MAILHOG_HOST")
+	smtpPort := os.Getenv("MAILHOG_PORT")
+	from := os.Getenv("MAIL_FROM")
+	password := ""
 
 	to := []string{data.Email}
 	subject := "Subject: " + data.Subject
@@ -43,8 +43,6 @@ func sendEmail(task task.Task) error {
 		return err
 	}
 
-	// Log success
 	fmt.Printf("Email sent to %s\n", data.Email)
 	return nil
-
 }
