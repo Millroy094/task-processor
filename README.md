@@ -31,6 +31,7 @@ The application requires the following environment variables to function properl
 - `RABBITMQ_URL`: URL for RabbitMQ connection (default: `amqp://guest:guest@rabbitmq:5672/`).
 - `MONGODB_URL`: MongoDB connection URL (default: `mongodb://mongodb:27017/`).
 - `MAX_RETRIES`: Maximum number of retries for a failed task (default: `3`).
+- `API_PORT`: The port the producer will receive task request on (default: `8080`).
 
 ## Installation
 
