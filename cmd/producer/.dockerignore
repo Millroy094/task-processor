@@ -1,0 +1,20 @@
+# Ignore Go modules and Go build files
+/vendor
+*.go.sum
+*.exe
+*.out
+*.test
+*.dbg
+
+# Ignore local configuration files
+.env
+.idea
+.vscode
+*.log
+
+# Ignore the build and temporary files
+build/
+tmp/
+
+# Ignore Dockerfile (if it's in the same directory as the application)
+Dockerfile
