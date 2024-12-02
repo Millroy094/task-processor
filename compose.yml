@@ -33,6 +33,7 @@ services:
       - "8080:8080"
     environment:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      MONGODB_URL: mongodb://mongodb:27017
       API_PORT: 8080
     networks:
       - task-manager-network
@@ -46,6 +47,7 @@ services:
       - mongodb
     environment:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      MONGODB_URL: mongodb://mongodb:27017
     networks:
       - task-manager-network
 networks:

@@ -1,19 +1,45 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/millroy094/task-processor/pkg/common"
 	"github.com/millroy094/task-processor/pkg/task"
 	"github.com/streadway/amqp"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+var mongoClient *mongo.Client
+var taskCollection *mongo.Collection
+
+func updateTaskStatusAndFinishedAt(taskID int, status string, finishedAt time.Time) {
+	filter := map[string]interface{}{"id": taskID}
+	update := map[string]interface{}{
+		"$set": map[string]interface{}{
+			"status":     status,
+			"finishedAt": finishedAt,
+		},
+	}
+	_, err := taskCollection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		log.Printf("Error updating task status and finishedAt: %v", err)
+	}
+}
+
+func stopRetrying(task task.Task) {
+	updateTaskStatusAndFinishedAt(task.ID, "failed", time.Now())
+	log.Printf("Task %d exceeded max retries and is marked as failed.", task.ID)
+}
 
 func performTask(task task.Task) error {
 	switch task.Type {
@@ -46,30 +72,48 @@ func processor(id int, messages <-chan amqp.Delivery, shutdownChan <-chan struct
 				continue
 			}
 
-			if err := performTask(task); err != nil {
-				log.Printf("Worker %d: Task failed: %v\n", id, err)
-				message.Nack(false, true)
-				continue
+			retryCount, ok := message.Headers["retryCount"].(int)
+			if !ok {
+				retryCount = 0
 			}
 
-			fmt.Printf("Worker %d processing task ID %d of type %s\n", id, task.ID, task.Type)
+			maxRetries, err := strconv.Atoi(os.Getenv("MAX_RETRIES"))
+			if err != nil {
+				maxRetries = 3
+			}
 
-			message.Ack(false)
+			if err := performTask(task); err != nil {
+				log.Printf("Worker %d: Task failed: %v\n", id, err)
+
+				if retryCount < maxRetries {
+					retryCount++
+					message.Headers["retryCount"] = retryCount
+					message.Nack(true, false)
+				} else {
+					stopRetrying(task)
+					message.Ack(false)
+				}
+			} else {
+				updateTaskStatusAndFinishedAt(task.ID, "completed", time.Now())
+				fmt.Printf("Worker %d processing task ID %d of type %s\n", id, task.ID, task.Type)
+				message.Ack(false)
+			}
 		case <-shutdownChan:
 			log.Printf("Worker %d: Received shutdown signal\n", id)
 			return
 		}
 	}
-
 }
 
 func main() {
-
-	_, err := common.PrepareEnvironment([]string{"RABBITMQ_URL"})
+	_, err := common.PrepareEnvironment([]string{"RABBITMQ_URL", "MONGODB_URL", "MAX_RETRIES"})
 
 	if err != nil {
 		log.Fatalf("Environment preparation failed: %v", err)
 	}
+
+	mongoClient = common.InitializeMongoDb()
+	taskCollection = mongoClient.Database("task_manager").Collection("tasks")
 
 	connection, channel, queue := common.RetrieveRabbitMQQueue()
 

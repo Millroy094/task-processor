@@ -5,13 +5,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/millroy094/task-processor/pkg/common"
 	"github.com/millroy094/task-processor/pkg/task"
 	"github.com/streadway/amqp"
 	v3 "github.com/swaggest/swgui/v3"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+var mongoClient *mongo.Client
+var taskCollection *mongo.Collection
 
 // @title Task Processor API
 // @version 1.0
@@ -52,6 +57,15 @@ func createTaskHandler(channel *amqp.Channel, queue string) func(*gin.Context) {
 			return
 		}
 
+		task.CreatedAt = time.Now()
+		task.Status = "pending"
+
+		_, err := taskCollection.InsertOne(nil, task)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save task to MongoDB"})
+			return
+		}
+
 		sendTask(channel, queue, task)
 		c.JSON(http.StatusCreated, gin.H{"message": fmt.Sprintf("Task ID %d queued successfully", task.ID)})
 	}
@@ -59,13 +73,16 @@ func createTaskHandler(channel *amqp.Channel, queue string) func(*gin.Context) {
 
 func main() {
 
-	envVariables, err := common.PrepareEnvironment([]string{"RABBITMQ_URL", "API_PORT"})
+	envVariables, err := common.PrepareEnvironment([]string{"RABBITMQ_URL", "MONGODB_URL", "API_PORT"})
 
 	if err != nil {
 		log.Fatalf("Environment preparation failed: %v", err)
 	}
 
 	apiPort := envVariables["API_PORT"]
+
+	mongoClient = common.InitializeMongoDb()
+	taskCollection = mongoClient.Database("task_manager").Collection("tasks")
 
 	connection, channel, queue := common.RetrieveRabbitMQQueue()
 
