@@ -6,7 +6,9 @@ import (
 	"time"
 )
 
-// @Description Represents the payload for an email task.
+// EmailPayload represents the payload for an email task.
+// @Description Payload for sending an email.
+// @example {"email": "user@example.com", "subject": "Welcome!", "body": "Thank you for joining us!"}
 type EmailPayload struct {
 	// @example "user@example.com"
 	Email string `json:"email"`
@@ -18,7 +20,8 @@ type EmailPayload struct {
 	Body string `json:"body"`
 }
 
-// @Description Represents the payload for a health check task.
+// @Description Payload for performing a health check.
+// @example {"url": "https://example.com/health", "method": "GET", "status": "200 OK"}
 type HealthCheckPayload struct {
 	// @example "https://example.com/health"
 	URL string `json:"url"`
@@ -45,48 +48,37 @@ type TaskResult struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// @Description Represents a task with type and payload information.
-// @DiscriminatorField type
-// @DiscriminatorMapping email EmailPayload, health_check HealthCheckPayload
+// Task represents a task that can have different payloads based on its type.
+// @Description Represents a task with dynamic payloads based on the task type.
+// @Discriminator type
 type Task struct {
-	// @ID Task ID
+	// Task ID
 	// @example 1
-	// It will only appear when retrieving the task (GET).
 	// @ReadOnly
 	ID int `json:"id,omitempty" swaggerignore:"true"`
 
-	// @Type Type of the task (e.g., "email", "health_check")
+	// Task type determines the payload structure.
 	// @example "email"
-	Type string `json:"type"`
+	Type string `json:"type" example:"email"`
 
-	// @Payload The actual task payload, which varies based on the task type.
-	// Using RawMessage to delay unmarshalling.
+	// Dynamic payload that varies by type.
 	// @oneOf {object} EmailPayload {object} HealthCheckPayload
+	// @example {"email": "user@example.com", "subject": "Welcome!", "body": "Thank you for joining us!"}
 	Payload json.RawMessage `json:"payload"`
 
-	// @CreatedAt The time the task was created.
 	// @example "2024-11-27T12:30:00Z"
-	// It will only appear when retrieving the task (GET).
 	// @ReadOnly
 	CreatedAt time.Time `json:"createdAt,omitempty" swaggerignore:"true"`
 
-	// @Status The current status of the task (e.g., "pending", "in-progress", "completed").
 	// @example "pending"
-	// This field will be auto-populated on the server-side.
-	// It will only appear when retrieving the task (GET).
 	// @ReadOnly
 	Status string `json:"status,omitempty" swaggerignore:"true"`
 
-	// @FinishedAt The time when the task was finished (only updated when task is completed).
 	// @example "2024-11-27T12:35:00Z"
-	// This field will be auto-populated on the server-side.
-	// It will only appear when retrieving the task (GET).
 	// @ReadOnly
 	FinishedAt time.Time `json:"finishedAt,omitempty" swaggerignore:"true"`
 
-	// @Result The result of the task, includes status, error, and detail.
-	// This field will be auto-populated by the backend after task completion.
-	// @example {"status": "completed", "timestamp": "2024-12-03T12:35:00Z"}
+	// @example {"status": "completed", "timestamp": "2024-12-03T12:30:00Z"}
 	// @ReadOnly
 	Result TaskResult `json:"result,omitempty" swaggerignore:"true"`
 }
