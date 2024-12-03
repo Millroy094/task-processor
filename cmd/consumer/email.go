@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -19,13 +18,7 @@ type EmailPayload struct {
 	Body    string `json:"body"`
 }
 
-func sendEmail(task task.Task) error {
-	var data EmailPayload
-
-	if err := json.Unmarshal([]byte(task.Payload), &data); err != nil {
-		log.Printf("Failed to unmarshal email payload: %v", err)
-		return err
-	}
+func sendEmail(task task.Task, data EmailPayload) error {
 
 	smtpHost := os.Getenv("MAILHOG_HOST")
 	smtpPortStr := os.Getenv("MAILHOG_PORT")

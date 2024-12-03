@@ -42,11 +42,18 @@ func stopRetrying(task task.Task) {
 }
 
 func performTask(task task.Task) error {
-	switch task.Type {
-	case "email":
-		return sendEmail(task)
-	case "health_check":
-		return performHealthCheck(task)
+
+	payload, err := task.UnmarshalPayload()
+	if err != nil {
+		log.Printf("Failed to unmarshal payload for task ID %d: %v\n", task.ID, err)
+		return err
+	}
+
+	switch p := payload.(type) {
+	case EmailPayload:
+		return sendEmail(task, p)
+	case HealthCheckPayload:
+		return performHealthCheck(task, p)
 	default:
 		return nil
 	}

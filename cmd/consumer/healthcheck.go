@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,13 +17,7 @@ type HealthCheckPayload struct {
 	Status string `json:"status"`
 }
 
-func performHealthCheck(task task.Task) error {
-	var data HealthCheckPayload
-	err := json.Unmarshal([]byte(task.Payload), &data)
-	if err != nil {
-		log.Printf("Failed to unmarshal health check payload: %v", err)
-		return err
-	}
+func performHealthCheck(task task.Task, data HealthCheckPayload) error {
 
 	expectedStatusCode, err := strconv.Atoi(data.Status)
 	if err != nil {
