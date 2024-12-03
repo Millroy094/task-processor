@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/millroy094/task-processor/pkg/task"
 	mail "github.com/xhit/go-simple-mail/v2"
@@ -39,7 +41,6 @@ func sendEmail(task task.Task) error {
 
 	smtpClient.Host = smtpHost
 	smtpClient.Port = smtpPort
-
 	smtpClient.Username = ""
 	smtpClient.Password = ""
 	smtpClient.Encryption = mail.EncryptionNone
@@ -56,11 +57,29 @@ func sendEmail(task task.Task) error {
 		SetSubject(data.Subject).
 		SetBody(mail.TextPlain, data.Body)
 
+	result := task.Result
+	result.Status = "completed"
+	result.Timestamp = time.Now()
+
 	if err := email.Send(client); err != nil {
 		log.Printf("Failed to send email: %v", err)
+		result.Status = "failed"
+		result.Error = fmt.Sprintf("failed to send email: %v", err)
+	} else {
+		result.Detail = fmt.Sprintf("Email sent to %s", data.Email)
+	}
+
+	update := map[string]interface{}{
+		"$set": map[string]interface{}{
+			"result":    result,
+			"updatedAt": time.Now(),
+		},
+	}
+	_, err = taskCollection.UpdateOne(context.Background(), map[string]interface{}{"id": task.ID}, update)
+	if err != nil {
+		log.Printf("Error updating task result: %v", err)
 		return err
 	}
 
-	fmt.Printf("Email sent to %s\n", data.Email)
 	return nil
 }

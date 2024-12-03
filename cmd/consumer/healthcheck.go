@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/millroy094/task-processor/pkg/task"
 )
@@ -17,7 +19,6 @@ type HealthCheckPayload struct {
 }
 
 func performHealthCheck(task task.Task) error {
-
 	var data HealthCheckPayload
 	err := json.Unmarshal([]byte(task.Payload), &data)
 	if err != nil {
@@ -26,7 +27,6 @@ func performHealthCheck(task task.Task) error {
 	}
 
 	expectedStatusCode, err := strconv.Atoi(data.Status)
-
 	if err != nil {
 		return fmt.Errorf("invalid status code: %v", err)
 	}
@@ -43,10 +43,28 @@ func performHealthCheck(task task.Task) error {
 	}
 	defer resp.Body.Close()
 
+	result := task.Result
+	result.Status = "completed"
+	result.Timestamp = time.Now()
+
 	if resp.StatusCode != expectedStatusCode {
-		return fmt.Errorf("health check failed for %s: expected status %d, got %d", data.URL, expectedStatusCode, resp.StatusCode)
+		result.Status = "failed"
+		result.Error = fmt.Sprintf("expected status %d, got %d", expectedStatusCode, resp.StatusCode)
+	} else {
+		result.Detail = fmt.Sprintf("Health check passed for %s: received expected status %d", data.URL, resp.StatusCode)
 	}
 
-	fmt.Printf("Health check passed for %s: received expected status %d\n", data.URL, resp.StatusCode)
+	update := map[string]interface{}{
+		"$set": map[string]interface{}{
+			"result":    result,
+			"updatedAt": time.Now(),
+		},
+	}
+	_, err = taskCollection.UpdateOne(context.Background(), map[string]interface{}{"id": task.ID}, update)
+	if err != nil {
+		log.Printf("Error updating task result: %v", err)
+		return err
+	}
+
 	return nil
 }
