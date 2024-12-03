@@ -72,6 +72,10 @@ func processor(id int, messages <-chan amqp.Delivery, shutdownChan <-chan struct
 				continue
 			}
 
+			if message.Headers == nil {
+				message.Headers = make(map[string]interface{})
+			}
+
 			retryCount, ok := message.Headers["retryCount"].(int)
 			if !ok {
 				retryCount = 0

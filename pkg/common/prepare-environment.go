@@ -17,8 +17,11 @@ func splitEnv(env string) [2]string {
 }
 
 func PrepareEnvironment(requiredEnvVariableNames []string) (map[string]string, error) {
-	if err := godotenv.Load(); err != nil {
-		return nil, fmt.Errorf("failed to load .env file: %w", err)
+
+	if _, err := os.Stat(".env"); err == nil {
+		if err := godotenv.Load(); err != nil {
+			return nil, fmt.Errorf("Error loading .env file: %v", err)
+		}
 	}
 
 	for _, variableName := range requiredEnvVariableNames {

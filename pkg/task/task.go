@@ -1,6 +1,9 @@
 package task
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // @Description Represents a task with ID, type, and payload information.
 type Task struct {
@@ -13,8 +16,8 @@ type Task struct {
 	Type string `json:"type"`
 
 	// @Payload The actual task payload (which can vary depending on the task type)
-	// @example "{\"email\":\"recipient@example.com\",\"subject\":\"Welcome!\",\"body\":\"Hello!\"}"
-	Payload string `json:"payload"`
+	// Using RawMessage to delay unmarshalling
+	Payload json.RawMessage `json:"payload"`
 
 	// @CreatedAt The time the task was created
 	// @example "2024-11-27T12:30:00Z"

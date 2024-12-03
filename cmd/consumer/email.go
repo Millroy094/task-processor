@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/smtp"
 	"os"
+	"strconv"
 
 	"github.com/millroy094/task-processor/pkg/task"
+	mail "github.com/xhit/go-simple-mail/v2"
 )
 
 type EmailPayload struct {
@@ -17,7 +18,6 @@ type EmailPayload struct {
 }
 
 func sendEmail(task task.Task) error {
-
 	var data EmailPayload
 
 	if err := json.Unmarshal([]byte(task.Payload), &data); err != nil {
@@ -26,20 +26,38 @@ func sendEmail(task task.Task) error {
 	}
 
 	smtpHost := os.Getenv("MAILHOG_HOST")
-	smtpPort := os.Getenv("MAILHOG_PORT")
+	smtpPortStr := os.Getenv("MAILHOG_PORT")
 	from := os.Getenv("MAIL_FROM")
-	password := ""
 
-	to := []string{data.Email}
-	subject := "Subject: " + data.Subject
-	body := "Message: " + data.Body
+	smtpPort, err := strconv.Atoi(smtpPortStr)
+	if err != nil {
+		log.Printf("Failed to convert smtpPort to int: %v", err)
+		return err
+	}
 
-	msg := []byte(subject + "\r\n\r\n" + body)
+	smtpClient := mail.NewSMTPClient()
 
-	auth := smtp.PlainAuth("", from, password, smtpHost)
+	smtpClient.Host = smtpHost
+	smtpClient.Port = smtpPort
 
-	if err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, msg); err != nil {
-		log.Printf("Failed to send email to %s: %v\n", data.Email, err)
+	smtpClient.Username = ""
+	smtpClient.Password = ""
+	smtpClient.Encryption = mail.EncryptionNone
+
+	client, err := smtpClient.Connect()
+	if err != nil {
+		log.Printf("Failed to connect to SMTP server: %v", err)
+		return err
+	}
+
+	email := mail.NewMSG()
+	email.SetFrom(from).
+		AddTo(data.Email).
+		SetSubject(data.Subject).
+		SetBody(mail.TextPlain, data.Body)
+
+	if err := email.Send(client); err != nil {
+		log.Printf("Failed to send email: %v", err)
 		return err
 	}
 

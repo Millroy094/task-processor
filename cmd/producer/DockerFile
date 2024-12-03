@@ -1,4 +1,4 @@
-FROM golang:1.21 AS builder
+FROM golang:1.23.3 AS builder
 
 WORKDIR /app
 
@@ -8,19 +8,17 @@ COPY ../../go.mod ../../go.sum ./
 
 RUN go mod download
 
-COPY ../../cmd/producer ./cmd/producer
+COPY ../../cmd/producer .
 COPY ../../pkg ./pkg
 
-RUN swag init --parseDependency --parseInternal --output ./docs
+RUN swag init --parseDependency --parseInternal --output ./docs && go build -o producer .
 
-RUN go build -o producer ./cmd/producer/main.go
-
-FROM debian:bullseye-slim
+FROM ubuntu:22.04
 
 WORKDIR /root/
 
 COPY --from=builder /app/producer .
-COPY --from=builder /app/cmd/producer/docs ./docs
+COPY --from=builder /app/docs ./docs
 
 EXPOSE 8080
 
