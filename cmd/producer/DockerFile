@@ -2,8 +2,6 @@ FROM golang:1.23.3 AS builder
 
 WORKDIR /app
 
-RUN go install github.com/swaggo/swag/cmd/swag@latest
-
 COPY ../../go.mod ../../go.sum ./
 
 RUN go mod download
@@ -11,14 +9,14 @@ RUN go mod download
 COPY ../../cmd/producer .
 COPY ../../pkg ./pkg
 
-RUN swag init --parseDependency --parseInternal --output ./docs && go build -o producer .
+RUN go build -o producer .
 
 FROM ubuntu:22.04
 
 WORKDIR /root/
 
 COPY --from=builder /app/producer .
-COPY --from=builder /app/docs ./docs
+COPY ../../cmd/producer/docs ./docs
 
 EXPOSE 8080
 
